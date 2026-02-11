@@ -172,20 +172,22 @@ class TradingEconomicsScraper:
     event_lower = event_name.lower()
     return any(keyword in event_lower for keyword in relevant_keywords)
     
-    def _simplify_event_name(self, name):
-        """Simplifie le nom de l'événement"""
-        name_lower = name.lower()
-        
-        if 'interest rate' in name_lower or 'fed funds' in name_lower or 'fomc' in name_lower:
-            return "Fed Decision - Taux directeurs"
-        elif 'cpi' in name_lower or 'consumer price' in name_lower:
-            return "CPI - Inflation USA"
-        elif 'ecb' in name_lower:
-            return "ECB Decision - Taux BCE"
-        elif 'gdp' in name_lower:
-            return "GDP - Croissance USA"
-        
-        return name
+def _simplify_event_name(self, name):
+    """Simplifie le nom de l'événement"""
+    name_lower = name.lower()
+    
+    if 'non farm' in name_lower or 'payroll' in name_lower or 'nfp' in name_lower:
+        return "NFP - Non-Farm Payroll"  # ← AJOUTE CE BLOC
+    elif 'interest rate' in name_lower or 'fed funds' in name_lower or 'fomc' in name_lower:
+        return "Fed Decision - Taux directeurs"
+    elif 'cpi' in name_lower or 'consumer price' in name_lower:
+        return "CPI - Inflation USA"
+    elif 'ecb' in name_lower:
+        return "ECB Decision - Taux BCE"
+    elif 'gdp' in name_lower:
+        return "GDP - Croissance USA"
+    
+    return name
     
     def _get_country_flag(self, country_text):
         """Retourne le drapeau selon le pays"""
