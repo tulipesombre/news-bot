@@ -58,21 +58,13 @@ def get_hardcoded_events():
     
     events = {}
     
-    # NFP - 1er vendredi du mois
-    nfp_date = get_first_friday_of_month(year, month)
-    nfp_date = nfp_date.replace(hour=13, minute=30)
-    nfp_paris = convert_est_to_paris(nfp_date)
+    # ❌ SUPPRIMER TOUT CE BLOC NFP
+    # nfp_date = get_first_friday_of_month(year, month)
+    # nfp_date = nfp_date.replace(hour=13, minute=30)
+    # nfp_paris = convert_est_to_paris(nfp_date)
+    # events[nfp_paris.date().isoformat()] = { ... }
     
-    events[nfp_paris.date().isoformat()] = {
-        "name": "NFP - Non-Farm Payroll",
-        "time_paris": nfp_paris.strftime("%H:%M"),
-        "country": "🇺🇸",
-        "importance": "⭐⭐⭐⭐⭐",
-        "assets": ["ES", "NQ", "GC", "6E", "CL", "BTC", "ETH"],
-        "description": "Nombre d'emplois créés USA - Annonce critique"
-    }
-    
-    # Oil Inventory - Tous les mercredis
+    # ✅ GARDER: Oil Inventory - Tous les mercredis
     wednesdays = get_all_wednesdays_of_month(year, month)
     for wednesday in wednesdays:
         oil_date = wednesday.replace(hour=10, minute=30)
@@ -88,7 +80,7 @@ def get_hardcoded_events():
                 "description": "Stocks de pétrole brut USA"
             }
     
-    # Earnings Season
+    # ✅ GARDER: Earnings Season
     is_earnings, earnings_start, earnings_end = is_earnings_season()
     if is_earnings:
         earnings_key = earnings_start.date().isoformat()
