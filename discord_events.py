@@ -39,6 +39,7 @@ class DiscordEventManager:
                 if event_datetime < datetime.now(ZoneInfo("Europe/Paris")):
                     continue
                 
+                # Créer l'événement Discord avec les bons attributs
                 discord_event = await guild.create_scheduled_event(
                     name=f"{event_data['country']} {event_data['name']}",
                     description=(
@@ -50,8 +51,8 @@ class DiscordEventManager:
                     start_time=event_datetime,
                     end_time=event_datetime + timedelta(hours=1),
                     location="Calendrier économique",
-                    privacy_level=discord.ScheduledEventPrivacyLevel.guild_only,
-                    entity_type=discord.ScheduledEventEntityType.external,
+                    privacy_level=discord.PrivacyLevel.guild_only,
+                    entity_type=discord.EntityType.external,
                 )
                 
                 created_count += 1
