@@ -160,16 +160,17 @@ class TradingEconomicsScraper:
             return 9, 0
     
     def _is_relevant_event(self, event_name):
-        """Vérifie si l'événement est pertinent"""
-        relevant_keywords = [
-            'interest rate', 'fomc', 'fed funds', 'federal reserve',
-            'cpi', 'consumer price', 'inflation',
-            'ecb', 'european central bank',
-            'gdp', 'gross domestic'
-        ]
-        
-        event_lower = event_name.lower()
-        return any(keyword in event_lower for keyword in relevant_keywords)
+    """Vérifie si l'événement est pertinent"""
+    relevant_keywords = [
+        'interest rate', 'fomc', 'fed funds', 'federal reserve',
+        'cpi', 'consumer price', 'inflation',
+        'ecb', 'european central bank',
+        'gdp', 'gross domestic',
+        'non farm', 'payroll', 'nfp'  
+    ]
+    
+    event_lower = event_name.lower()
+    return any(keyword in event_lower for keyword in relevant_keywords)
     
     def _simplify_event_name(self, name):
         """Simplifie le nom de l'événement"""
