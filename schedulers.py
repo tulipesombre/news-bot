@@ -4,7 +4,8 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 from discord_events import DiscordEventManager
 from scraper import TradingEconomicsScraper
-from holidays import MarketHolidays
+from utils import get_hardcoded_events
+from market_holidays import MarketHolidays
 import discord
 
 scheduler = AsyncIOScheduler()
@@ -16,14 +17,10 @@ async def send_weekly_agenda(bot, channel_id, guild_id):
     
     print("📅 Début scraping TradingEconomics...")
     
-    # OPTION 1: Avec hardcoded events (EIA, etc.)
-    # from utils import get_hardcoded_events
-    # hardcoded_events = get_hardcoded_events()
-    # scraped_events = scraper.get_calendar_events(days_ahead=7)
-    # all_events = {**hardcoded_events, **scraped_events}
+    hardcoded_events = get_hardcoded_events()
+    scraped_events = scraper.get_calendar_events(days_ahead=7)
     
-    # OPTION 2: Seulement TradingEconomics (décommenter la ligne suivante)
-    all_events = scraper.get_calendar_events(days_ahead=7)
+    all_events = {**hardcoded_events, **scraped_events}
     
     print(f"📊 Total événements: {len(all_events)}")
     
@@ -106,14 +103,9 @@ async def send_daily_reminder(bot, channel_id):
     """Envoie le rappel quotidien des annonces du jour"""
     channel = bot.get_channel(channel_id)
     
-    # OPTION 1: Avec hardcoded events
-    # from utils import get_hardcoded_events
-    # hardcoded_events = get_hardcoded_events()
-    # scraped_events = scraper.get_calendar_events(days_ahead=1)
-    # all_events = {**hardcoded_events, **scraped_events}
-    
-    # OPTION 2: Seulement TradingEconomics
-    all_events = scraper.get_calendar_events(days_ahead=1)
+    hardcoded_events = get_hardcoded_events()
+    scraped_events = scraper.get_calendar_events(days_ahead=1)
+    all_events = {**hardcoded_events, **scraped_events}
     
     today = datetime.now(ZoneInfo("Europe/Paris")).date()
     today_str = today.isoformat()
