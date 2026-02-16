@@ -1,97 +1,119 @@
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+from holidays import MarketHolidays
 
-def get_first_friday_of_month(year, month):
-    """Retourne le 1er vendredi du mois donné"""
-    first_day = datetime(year, month, 1, tzinfo=ZoneInfo("America/New_York"))
-    days_until_friday = (4 - first_day.weekday()) % 7
-    first_friday = first_day + timedelta(days=days_until_friday)
-    return first_friday
+def format_event_message(event):
+    """Formate un événement en message Discord élégant"""
+    assets_str = " ".join(event['assets'][:5])  # Limiter à 5 assets
+    
+    message = f"""
+╔══════════════════════════════════
+║ **{event['name']}**
+║ 
+║ 🕐 **Heure:** {event['time_paris']} (Paris)
+║ {event['country']} **Impact:** {event['importance']}
+║ 📊 **Assets:** `{assets_str}`
+╚══════════════════════════════════
+"""
+    return message.strip()
 
-def get_all_wednesdays_of_month(year, month):
-    """Retourne tous les mercredis du mois"""
-    first_day = datetime(year, month, 1, tzinfo=ZoneInfo("America/New_York"))
-    days_until_wednesday = (2 - first_day.weekday()) % 7
-    first_wednesday = first_day + timedelta(days=days_until_wednesday)
+def format_weekly_agenda(events_by_date):
+    """Formate l'agenda hebdomadaire avec détection des jours fériés"""
+    if not events_by_date:
+        return "📅 **Aucun événement majeur cette semaine**"
     
-    wednesdays = []
-    current = first_wednesday
-    while current.month == month:
-        wednesdays.append(current)
-        current += timedelta(days=7)
+    message = "📅 **AGENDA ÉCONOMIQUE - 7 PROCHAINS JOURS**\n\n"
     
-    return wednesdays
-
-def convert_est_to_paris(dt_est):
-    """Convertit datetime EST vers Paris"""
-    dt_utc = dt_est.astimezone(ZoneInfo("UTC"))
-    dt_paris = dt_utc.astimezone(ZoneInfo("Europe/Paris"))
-    return dt_paris
-
-def is_earnings_season():
-    """Vérifie si on est en période d'earnings"""
-    today = datetime.now(ZoneInfo("Europe/Paris"))
-    year = today.year
+    sorted_dates = sorted(events_by_date.keys())
     
-    earnings_periods = [
-        (datetime(year, 1, 15, tzinfo=ZoneInfo("Europe/Paris")), 
-         datetime(year, 2, 5, tzinfo=ZoneInfo("Europe/Paris"))),
-        (datetime(year, 4, 15, tzinfo=ZoneInfo("Europe/Paris")), 
-         datetime(year, 5, 5, tzinfo=ZoneInfo("Europe/Paris"))),
-        (datetime(year, 7, 15, tzinfo=ZoneInfo("Europe/Paris")), 
-         datetime(year, 8, 5, tzinfo=ZoneInfo("Europe/Paris"))),
-        (datetime(year, 10, 15, tzinfo=ZoneInfo("Europe/Paris")), 
-         datetime(year, 11, 5, tzinfo=ZoneInfo("Europe/Paris"))),
-    ]
-    
-    for start, end in earnings_periods:
-        if start <= today <= end:
-            return True, start, end
-    
-    return False, None, None
-
-def get_hardcoded_events():
-    """Retourne les événements hardcodés pour le mois en cours"""
-    now = datetime.now(ZoneInfo("Europe/Paris"))
-    year = now.year
-    month = now.month
-    
-    events = {}
-    
-    # ❌ SUPPRIMER TOUT CE BLOC NFP
-    # nfp_date = get_first_friday_of_month(year, month)
-    # nfp_date = nfp_date.replace(hour=13, minute=30)
-    # nfp_paris = convert_est_to_paris(nfp_date)
-    # events[nfp_paris.date().isoformat()] = { ... }
-    
-    # ✅ GARDER: Oil Inventory - Tous les mercredis
-    wednesdays = get_all_wednesdays_of_month(year, month)
-    for wednesday in wednesdays:
-        oil_date = wednesday.replace(hour=10, minute=30)
-        oil_paris = convert_est_to_paris(oil_date)
+    for date_str in sorted_dates:
+        event = events_by_date[date_str]
+        date_obj = datetime.fromisoformat(date_str)
         
-        if oil_paris.date() >= now.date():
-            events[oil_paris.date().isoformat()] = {
-                "name": "EIA Crude Oil Inventories",
-                "time_paris": oil_paris.strftime("%H:%M"),
-                "country": "🇺🇸",
-                "importance": "⭐⭐⭐⭐",
-                "assets": ["CL", "ES", "GC"],
-                "description": "Stocks de pétrole brut USA"
-            }
+        # Vérifier si c'est un jour férié
+        holidays = MarketHolidays.is_market_holiday(date_obj.date())
+        
+        day_name = date_obj.strftime('%A %d %B').capitalize()
+        
+        # Ajouter un indicateur si jour férié
+        holiday_indicator = ""
+        if holidays:
+            holiday_names = " | ".join(holidays)
+            holiday_indicator = f"\n🔴 **JOUR FÉRIÉ:** {holiday_names}"
+        
+        message += f"**{day_name}**{holiday_indicator}\n"
+        message += f"🕐 {event['time_paris']} | {event['country']} {event['importance']}\n"
+        message += f"**{event['name']}**\n"
+        message += f"📊 Assets: `{' '.join(event['assets'][:5])}`\n\n"
     
-    # ✅ GARDER: Earnings Season
-    is_earnings, earnings_start, earnings_end = is_earnings_season()
-    if is_earnings:
-        earnings_key = earnings_start.date().isoformat()
-        if earnings_key not in events:
-            events[earnings_key] = {
-                "name": "Earnings Season",
-                "time_paris": "Variable",
-                "country": "🇺🇸",
-                "importance": "⭐⭐⭐⭐",
-                "assets": ["NQ", "ES", "BTC", "ETH"],
-                "description": f"Période des résultats trimestriels jusqu'au {earnings_end.strftime('%d/%m')}"
-            }
+    # Ajouter section des jours fériés à venir
+    upcoming_holidays = MarketHolidays.get_upcoming_holidays(days_ahead=7)
+    if upcoming_holidays:
+        message += "\n━━━━━━━━━━━━━━━━━━━━\n"
+        message += "🚨 **JOURS FÉRIÉS CETTE SEMAINE** 🚨\n"
+        for holiday_info in upcoming_holidays:
+            date_str = holiday_info['date'].strftime('%A %d %B').capitalize()
+            holidays_str = " & ".join(holiday_info['holidays'])
+            message += f"• **{date_str}:** {holidays_str}\n"
     
-    return events
+    message += "\n━━━━━━━━━━━━━━━━━━━━"
+    message += "\n⚠️ **Les marchés peuvent être fermés ou avoir des horaires réduits les jours fériés**"
+    
+    return message
+
+def format_daily_reminder(event):
+    """Formate le rappel du jour avec indication de jour férié"""
+    date_obj = event['datetime'].date()
+    holidays = MarketHolidays.is_market_holiday(date_obj)
+    
+    holiday_warning = ""
+    if holidays:
+        holiday_names = " | ".join(holidays)
+        holiday_warning = f"\n\n🔴 **ATTENTION: JOUR FÉRIÉ**\n{holiday_names}\n⚠️ Marchés potentiellement fermés ou volatilité réduite"
+    
+    message = f"""
+🚨 **RAPPEL ÉVÉNEMENT MAJEUR AUJOURD'HUI** 🚨
+
+**{event['name']}**
+🕐 Dans ~1h ({event['time_paris']} Paris)
+{event['country']} Impact: {event['importance']}
+📊 Assets concernés: `{' '.join(event['assets'][:5])}`
+{holiday_warning}
+
+⚡ Préparez vos positions!
+"""
+    return message.strip()
+
+def get_next_trading_day():
+    """Retourne le prochain jour ouvrable (non férié)"""
+    today = datetime.now(ZoneInfo("UTC")).date()
+    
+    for i in range(1, 30):  # Chercher jusqu'à 30 jours dans le futur
+        check_date = today + timedelta(days=i)
+        
+        # Vérifier si c'est un week-end
+        if check_date.weekday() >= 5:  # 5=samedi, 6=dimanche
+            continue
+        
+        # Vérifier si c'est un jour férié
+        holidays = MarketHolidays.is_market_holiday(check_date)
+        if not holidays:
+            return check_date
+    
+    return None
+
+def is_trading_day(check_date):
+    """Vérifie si une date est un jour de trading"""
+    if isinstance(check_date, datetime):
+        check_date = check_date.date()
+    
+    # Week-end ?
+    if check_date.weekday() >= 5:
+        return False
+    
+    # Jour férié ?
+    holidays = MarketHolidays.is_market_holiday(check_date)
+    if holidays:
+        return False
+    
+    return True
