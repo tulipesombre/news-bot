@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
-from holidays import MarketHolidays
+from market_holidays import MarketHolidays
 
 def format_event_message(event):
     """Formate un événement en message Discord élégant"""
