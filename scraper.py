@@ -162,11 +162,31 @@ class TradingEconomicsScraper:
     def _is_relevant_event(self, event_name):
         """Vérifie si l'événement est pertinent"""
         relevant_keywords = [
+            # Taux d'intérêt
             'interest rate', 'fomc', 'fed funds', 'federal reserve',
+            
+            # Inflation (AJOUTÉ: PPI, PCE, Core CPI)
             'cpi', 'consumer price', 'inflation',
+            'ppi', 'producer price',
+            'pce', 'personal consumption',
+            'core cpi', 'core inflation',
+            
+            # Banques centrales
             'ecb', 'european central bank',
+            'boe', 'bank of england',
+            
+            # Croissance
             'gdp', 'gross domestic',
-            'non farm', 'payroll', 'nfp'
+            
+            # Emploi
+            'non farm', 'payroll', 'nfp',
+            'unemployment', 'jobless',
+            
+            # Ventes (AJOUTÉ: Retail Sales)
+            'retail sales',
+            
+            # PMI manufacturier
+            'ism manufacturing', 'pmi manufacturing'
         ]
         
         event_lower = event_name.lower()
@@ -176,16 +196,49 @@ class TradingEconomicsScraper:
         """Simplifie le nom de l'événement"""
         name_lower = name.lower()
         
+        # Emploi
         if 'non farm' in name_lower or 'payroll' in name_lower or 'nfp' in name_lower:
             return "NFP - Non-Farm Payroll"
-        elif 'interest rate' in name_lower or 'fed funds' in name_lower or 'fomc' in name_lower:
+        
+        # Taux d'intérêt
+        if 'interest rate' in name_lower or 'fed funds' in name_lower or 'fomc' in name_lower:
             return "Fed Decision - Taux directeurs"
+        
+        # CPI
+        if 'core cpi' in name_lower:
+            return "Core CPI - Inflation sous-jacente USA"
         elif 'cpi' in name_lower or 'consumer price' in name_lower:
             return "CPI - Inflation USA"
-        elif 'ecb' in name_lower:
+        
+        # PPI (AJOUTÉ)
+        if 'ppi' in name_lower or 'producer price' in name_lower:
+            return "PPI - Prix à la production USA"
+        
+        # PCE (AJOUTÉ)
+        if 'pce' in name_lower or 'personal consumption' in name_lower:
+            return "PCE - Indice préféré de la Fed"
+        
+        # Retail Sales (AJOUTÉ)
+        if 'retail sales' in name_lower:
+            return "Retail Sales - Ventes au détail USA"
+        
+        # Unemployment (AJOUTÉ)
+        if 'unemployment' in name_lower or 'jobless' in name_lower:
+            return "Unemployment - Taux de chômage USA"
+        
+        # Banques centrales
+        if 'ecb' in name_lower:
             return "ECB Decision - Taux BCE"
-        elif 'gdp' in name_lower:
+        if 'boe' in name_lower or 'bank of england' in name_lower:
+            return "BoE Decision - Taux BoE"
+        
+        # GDP
+        if 'gdp' in name_lower:
             return "GDP - Croissance USA"
+        
+        # PMI/ISM (AJOUTÉ)
+        if 'ism manufacturing' in name_lower or 'pmi manufacturing' in name_lower:
+            return "ISM/PMI Manufacturing - Activité industrielle"
         
         return name
     
@@ -208,15 +261,36 @@ class TradingEconomicsScraper:
         """Détermine les assets affectés"""
         name_lower = event_name.lower()
         
+        # Fed / Taux d'intérêt
         if 'fed' in name_lower or 'fomc' in name_lower or 'interest rate' in name_lower:
             return ["ES", "NQ", "GC", "6E", "CL", "BTC", "ETH"]
-        elif 'cpi' in name_lower or 'inflation' in name_lower:
+        
+        # Inflation (CPI, PPI, PCE, Core)
+        elif any(kw in name_lower for kw in ['cpi', 'inflation', 'ppi', 'pce', 'core']):
             return ["ES", "NQ", "GC", "6E", "BTC", "ETH"]
+        
+        # ECB
         elif 'ecb' in name_lower:
             return ["6E", "ES", "NQ", "GC"]
+        
+        # BoE
+        elif 'boe' in name_lower or 'bank of england' in name_lower:
+            return ["6B", "ES", "NQ", "GC"]
+        
+        # GDP
         elif 'gdp' in name_lower:
             return ["ES", "NQ", "6E"]
-        elif 'non farm' in name_lower or 'payroll' in name_lower or 'nfp' in name_lower:
+        
+        # NFP / Emploi
+        elif any(kw in name_lower for kw in ['non farm', 'payroll', 'nfp', 'unemployment', 'jobless']):
             return ["ES", "NQ", "GC", "6E", "CL", "BTC", "ETH"]
+        
+        # Retail Sales
+        elif 'retail sales' in name_lower:
+            return ["ES", "NQ", "6E", "BTC", "ETH"]
+        
+        # PMI/ISM
+        elif 'ism' in name_lower or 'pmi' in name_lower:
+            return ["ES", "NQ", "GC"]
         
         return ["ES", "NQ"]
