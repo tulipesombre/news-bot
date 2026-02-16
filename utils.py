@@ -117,3 +117,39 @@ def is_trading_day(check_date):
         return False
     
     return True
+
+def get_hardcoded_events():
+    """
+    Retourne les événements récurrents hardcodés
+    Utile pour les événements qui ne sont pas toujours sur TradingEconomics
+    """
+    events = {}
+    
+    today = datetime.now(ZoneInfo("UTC"))
+    
+    # Générer les 7 prochains mercredis pour EIA Crude Oil Inventories
+    # Publié chaque mercredi à 10:30 ET (16:30 Paris)
+    for i in range(7):
+        check_date = today + timedelta(days=i)
+        
+        # Si c'est un mercredi (weekday=2) et pas un jour férié
+        if check_date.weekday() == 2 and is_trading_day(check_date):
+            event_datetime = datetime(
+                check_date.year, check_date.month, check_date.day,
+                10, 30,  # 10:30 AM ET
+                tzinfo=ZoneInfo("America/New_York")
+            )
+            
+            event_datetime_paris = event_datetime.astimezone(ZoneInfo("Europe/Paris"))
+            
+            events[check_date.date().isoformat()] = {
+                'name': 'EIA Crude Oil Inventories',
+                'time_paris': event_datetime_paris.strftime('%H:%M'),
+                'country': '🇺🇸',
+                'importance': '⭐⭐⭐⭐',
+                'assets': ['CL', 'ES', 'NQ', 'GC', 'BTC', 'ETH'],
+                'description': 'US Energy Information Administration - Weekly Petroleum Status Report',
+                'datetime': event_datetime_paris
+            }
+    
+    return events
