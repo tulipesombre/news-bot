@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo
 from discord_events import DiscordEventManager
 from scraper import TradingEconomicsScraper
 from utils import get_hardcoded_events
+from holidays import MarketHolidays
 import discord
 
 scheduler = AsyncIOScheduler()
@@ -49,14 +50,48 @@ async def send_weekly_agenda(bot, channel_id, guild_id):
             "Sunday": "Dimanche"
         }.get(day_name, day_name)
         
+        # Vérifier si c'est un jour férié
+        date_obj = datetime.fromisoformat(date_str).date()
+        holidays = MarketHolidays.is_market_holiday(date_obj)
+        holiday_indicator = ""
+        if holidays:
+            holiday_names = " | ".join(holidays)
+            holiday_indicator = f"\n🔴 **JOUR FÉRIÉ:** {holiday_names}"
+        
         value = (
             f"⏰ **{event_data['time_paris']}** - {event_data['country']} {event_data['name']}\n"
             f"   {event_data['importance']} | Assets: {', '.join(event_data['assets'])}\n"
+            f"{holiday_indicator}"
         )
         
         embed.add_field(
             name=f"📆 {day_fr} ({date_str})",
             value=value,
+            inline=False
+        )
+    
+    # Ajouter une section pour les jours fériés cette semaine
+    upcoming_holidays = MarketHolidays.get_upcoming_holidays(days_ahead=7)
+    if upcoming_holidays:
+        holidays_text = ""
+        for holiday_info in upcoming_holidays:
+            date_str = holiday_info['date'].strftime('%d/%m')
+            day_name = holiday_info['date'].strftime('%A')
+            day_fr = {
+                "Monday": "Lun",
+                "Tuesday": "Mar",
+                "Wednesday": "Mer",
+                "Thursday": "Jeu",
+                "Friday": "Ven",
+                "Saturday": "Sam",
+                "Sunday": "Dim"
+            }.get(day_name, day_name)
+            holidays_str = " & ".join(holiday_info['holidays'])
+            holidays_text += f"• **{day_fr} {date_str}:** {holidays_str}\n"
+        
+        embed.add_field(
+            name="🚨 Jours Fériés Cette Semaine",
+            value=holidays_text + "\n⚠️ Marchés potentiellement fermés ou volatilité réduite",
             inline=False
         )
     
@@ -72,17 +107,51 @@ async def send_daily_reminder(bot, channel_id):
     scraped_events = scraper.get_calendar_events(days_ahead=1)
     all_events = {**hardcoded_events, **scraped_events}
     
-    today = datetime.now(ZoneInfo("Europe/Paris")).date().isoformat()
-    today_events = {k: v for k, v in all_events.items() if k == today}
+    today = datetime.now(ZoneInfo("Europe/Paris")).date()
+    today_str = today.isoformat()
+    today_events = {k: v for k, v in all_events.items() if k == today_str}
     
+    # Vérifier si c'est un jour férié
+    holidays = MarketHolidays.is_market_holiday(today)
+    
+    # Si c'est un jour férié SANS événement économique, envoyer un message spécial
+    if holidays and not today_events:
+        embed = discord.Embed(
+            title="🔴 Jour Férié - Marchés Fermés",
+            color=discord.Color.red(),
+            description=datetime.now(ZoneInfo("Europe/Paris")).strftime("%A %d %B %Y")
+        )
+        
+        holidays_text = "\n".join(holidays)
+        embed.add_field(
+            name="🚨 Jours Fériés",
+            value=holidays_text + "\n\n⚠️ **Les marchés US et/ou UK sont fermés aujourd'hui**\n📊 Volatilité réduite attendue",
+            inline=False
+        )
+        
+        await channel.send(embed=embed)
+        print(f"✅ Alerte jour férié envoyée: {', '.join(holidays)}")
+        return
+    
+    # Si pas d'événement et pas de jour férié, ne rien envoyer
     if not today_events:
         return
     
+    # Si événements économiques, les afficher (avec alerte férié si applicable)
     embed = discord.Embed(
         title="🔔 Annonces Économiques Aujourd'hui",
-        color=discord.Color.gold(),
+        color=discord.Color.gold() if not holidays else discord.Color.orange(),
         description=datetime.now(ZoneInfo("Europe/Paris")).strftime("%A %d %B %Y")
     )
+    
+    # Ajouter alerte jour férié si applicable
+    if holidays:
+        holidays_text = " & ".join(holidays)
+        embed.add_field(
+            name="🔴 ATTENTION - Jour Férié",
+            value=f"{holidays_text}\n⚠️ **Marchés potentiellement fermés ou volatilité réduite**",
+            inline=False
+        )
     
     for date_str, event_data in today_events.items():
         embed.add_field(
