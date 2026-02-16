@@ -42,7 +42,12 @@ class TradingEconomicsScraper:
             print("⚠️ Table calendrier introuvable")
             return events
         
-        rows = calendar_table.find('tbody').find_all('tr')
+        tbody = calendar_table.find('tbody')
+        if not tbody:
+            print("⚠️ Tbody introuvable")
+            return events
+            
+        rows = tbody.find_all('tr')
         current_date = None
         
         for row in rows:
@@ -160,40 +165,40 @@ class TradingEconomicsScraper:
             return 9, 0
     
     def _is_relevant_event(self, event_name):
-        """Vérifie si l'événement est pertinent"""
+        """Vérifie si l'événement est pertinent - AMÉLIORÉ avec nouveaux indicateurs"""
         relevant_keywords = [
-            # Taux d'intérêt
+            # Taux d'intérêt (ANCIEN)
             'interest rate', 'fomc', 'fed funds', 'federal reserve',
             
-            # Inflation (AJOUTÉ: PPI, PCE, Core CPI)
+            # Inflation - ÉTENDU avec nouveaux indicateurs
             'cpi', 'consumer price', 'inflation',
-            'ppi', 'producer price',
-            'pce', 'personal consumption',
-            'core cpi', 'core inflation',
+            'ppi', 'producer price',  # NOUVEAU
+            'pce', 'personal consumption',  # NOUVEAU
+            'core cpi', 'core inflation',  # NOUVEAU
             
-            # Banques centrales
+            # Banques centrales (ANCIEN + NOUVEAU)
             'ecb', 'european central bank',
-            'boe', 'bank of england',
+            'boe', 'bank of england',  # NOUVEAU
             
-            # Croissance
+            # Croissance (ANCIEN)
             'gdp', 'gross domestic',
             
-            # Emploi
+            # Emploi (ANCIEN + NOUVEAU)
             'non farm', 'payroll', 'nfp',
-            'unemployment', 'jobless',
+            'unemployment', 'jobless',  # NOUVEAU
             
-            # Ventes (AJOUTÉ: Retail Sales)
-            'retail sales',
+            # Ventes (NOUVEAU)
+            'retail sales',  # NOUVEAU
             
-            # PMI manufacturier
-            'ism manufacturing', 'pmi manufacturing'
+            # PMI manufacturier (NOUVEAU)
+            'ism manufacturing', 'pmi manufacturing'  # NOUVEAU
         ]
         
         event_lower = event_name.lower()
         return any(keyword in event_lower for keyword in relevant_keywords)
     
     def _simplify_event_name(self, name):
-        """Simplifie le nom de l'événement"""
+        """Simplifie le nom de l'événement - AMÉLIORÉ"""
         name_lower = name.lower()
         
         # Emploi
@@ -204,25 +209,25 @@ class TradingEconomicsScraper:
         if 'interest rate' in name_lower or 'fed funds' in name_lower or 'fomc' in name_lower:
             return "Fed Decision - Taux directeurs"
         
-        # CPI
+        # CPI (vérifier Core CPI avant CPI général)
         if 'core cpi' in name_lower:
             return "Core CPI - Inflation sous-jacente USA"
         elif 'cpi' in name_lower or 'consumer price' in name_lower:
             return "CPI - Inflation USA"
         
-        # PPI (AJOUTÉ)
+        # PPI - NOUVEAU
         if 'ppi' in name_lower or 'producer price' in name_lower:
             return "PPI - Prix à la production USA"
         
-        # PCE (AJOUTÉ)
+        # PCE - NOUVEAU (indicateur préféré de la Fed)
         if 'pce' in name_lower or 'personal consumption' in name_lower:
             return "PCE - Indice préféré de la Fed"
         
-        # Retail Sales (AJOUTÉ)
+        # Retail Sales - NOUVEAU
         if 'retail sales' in name_lower:
             return "Retail Sales - Ventes au détail USA"
         
-        # Unemployment (AJOUTÉ)
+        # Unemployment - NOUVEAU
         if 'unemployment' in name_lower or 'jobless' in name_lower:
             return "Unemployment - Taux de chômage USA"
         
@@ -236,7 +241,7 @@ class TradingEconomicsScraper:
         if 'gdp' in name_lower:
             return "GDP - Croissance USA"
         
-        # PMI/ISM (AJOUTÉ)
+        # PMI/ISM - NOUVEAU
         if 'ism manufacturing' in name_lower or 'pmi manufacturing' in name_lower:
             return "ISM/PMI Manufacturing - Activité industrielle"
         
@@ -258,14 +263,14 @@ class TradingEconomicsScraper:
         return "🌍"
     
     def _get_affected_assets(self, event_name):
-        """Détermine les assets affectés"""
+        """Détermine les assets affectés - AMÉLIORÉ"""
         name_lower = event_name.lower()
         
         # Fed / Taux d'intérêt
         if 'fed' in name_lower or 'fomc' in name_lower or 'interest rate' in name_lower:
             return ["ES", "NQ", "GC", "6E", "CL", "BTC", "ETH"]
         
-        # Inflation (CPI, PPI, PCE, Core)
+        # Inflation (CPI, PPI, PCE, Core) - ÉTENDU
         elif any(kw in name_lower for kw in ['cpi', 'inflation', 'ppi', 'pce', 'core']):
             return ["ES", "NQ", "GC", "6E", "BTC", "ETH"]
         
@@ -273,7 +278,7 @@ class TradingEconomicsScraper:
         elif 'ecb' in name_lower:
             return ["6E", "ES", "NQ", "GC"]
         
-        # BoE
+        # BoE - NOUVEAU
         elif 'boe' in name_lower or 'bank of england' in name_lower:
             return ["6B", "ES", "NQ", "GC"]
         
@@ -281,15 +286,15 @@ class TradingEconomicsScraper:
         elif 'gdp' in name_lower:
             return ["ES", "NQ", "6E"]
         
-        # NFP / Emploi
+        # NFP / Emploi - ÉTENDU
         elif any(kw in name_lower for kw in ['non farm', 'payroll', 'nfp', 'unemployment', 'jobless']):
             return ["ES", "NQ", "GC", "6E", "CL", "BTC", "ETH"]
         
-        # Retail Sales
+        # Retail Sales - NOUVEAU
         elif 'retail sales' in name_lower:
             return ["ES", "NQ", "6E", "BTC", "ETH"]
         
-        # PMI/ISM
+        # PMI/ISM - NOUVEAU
         elif 'ism' in name_lower or 'pmi' in name_lower:
             return ["ES", "NQ", "GC"]
         
